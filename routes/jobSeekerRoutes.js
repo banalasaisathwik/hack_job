@@ -2,6 +2,7 @@ const express = require('express');
 const UserModel = require('../models/UserModel');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const Job = require('../models/JobModel');
 const fs = require("fs");
 
 router.use(express.json());
@@ -69,33 +70,43 @@ router.post('/login', async (req, res) => {
   }
 });
 
-router.post('/me', authenticateJwt, (req, res) => {
+router.put('/me', authenticateJwt, async (req, res) => {
   const { college, education, position, experience } = req.body;
+  const userId = req.user.username;
+
 
   try {
+    const user = await UserModel.findOne(userId);
+    console.log(user);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     user.college = college;
     user.experience = experience;
     user.education = education;
     user.position = position;
+    console.log(user);
+    await user.save();
 
-    user.save();
-
-    res.status(200).json({ message: 'user profile updated successfully' });
+    res.status(200).json({ message: 'User profile updated successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'failed to update user profile' });
+    res.status(500).json({ message: 'Failed to update user profile', error });
   }
 });
 
-router.get('/jobs', authenticateJwt, async (req, res) => {
 
+router.get('/jobs', authenticateJwt, async (req, res) => {
   try {
-    const jobs = await JobModel.find();
+    const jobs = await Job.find();
 
     res.status(200).json(jobs);
   } catch (error) {
-    res.status(500).json({ message: 'Failed to retrievelistings' });
+    res.status(500).json({ message: 'Failed to retrieve listings', error });
   }
 });
+
 
 router.post('/apply', authenticateJwt, (req, res) => {
   if (req.user.education & req.user.position) {
@@ -105,7 +116,7 @@ router.post('/apply', authenticateJwt, (req, res) => {
     });
   }
   else {
-    res.status.send('fill all your details in profile section');
+    res.status(500).send('fill all your details in profile section');
   }
 
 });
@@ -114,7 +125,6 @@ router.get('/filter/package', async (req, res) => {
   const { package } = req.query;
 
   try {
-    // Retrieve candidates with experience greater than or equal to the minimum requirement
     const jobs = await JobModel.find({
       salary: { $gte: package },
     });

@@ -13,6 +13,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    college: String,
+    education: String,
+    position: String,
+    experience: String
+
     // other user properties
 });
 
